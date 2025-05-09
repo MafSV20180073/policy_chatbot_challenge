@@ -1,5 +1,7 @@
 FROM python:3.11-slim
 
+ARG DEV=false
+
 WORKDIR /app
 
 COPY requirements.txt .
