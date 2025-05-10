@@ -1,7 +1,7 @@
 version: "3.9"
 
 services:
-  chatbot:
+  orders-api:
     build:
       context: .
       args:
@@ -11,3 +11,20 @@ services:
     ports:
       - "${APP_PORT}:8000"
     restart: unless-stopped
+    depends_on:
+      - db
+
+  db:
+    image: postgres:14
+    restart: always
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: orders_db
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+  pgdata:

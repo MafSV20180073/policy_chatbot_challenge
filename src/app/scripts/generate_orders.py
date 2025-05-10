@@ -29,7 +29,7 @@ def generate_orders(num_orders: int) -> pd.DataFrame:
             }
         )
 
-    orders = pd.DataFrame(orders)
+    orders = pd.DataFrame(orders) 
 
     return orders
 
