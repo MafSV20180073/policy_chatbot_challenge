@@ -28,7 +28,3 @@ def get_db():
         yield db
     finally:
         db.close()
-
-
-# TODO: turn this script into a class?
-# TODO: reorganize folders and files (do I want services or is it overkill for this challenge?)
