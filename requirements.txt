@@ -3,6 +3,7 @@ anyio==4.9.0
 astroid==3.3.9
 black==25.1.0
 click==8.1.8
+debugpy==1.8.14
 dill==0.4.0
 faker==37.1.0
 fastapi==0.115.12
@@ -20,6 +21,7 @@ platformdirs==4.3.7
 psycopg2-binary==2.9.10
 pydantic==2.11.4
 pydantic-core==2.33.2
+pydevd-pycharm~=251.25410.122
 pylint==3.3.7
 python-dateutil==2.9.0.post0
 python-dotenv==1.1.0

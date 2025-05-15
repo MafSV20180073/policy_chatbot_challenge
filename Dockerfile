@@ -1,6 +1,6 @@
 FROM python:3.11-slim
 
-ARG DEV=false
+#ARG DEV=false
 
 WORKDIR /app
 

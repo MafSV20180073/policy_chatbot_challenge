@@ -8,8 +8,15 @@ services:
         DEV: false
     env_file:
       - .env
+    environment:
+      - DEBUG_MODE=true
+    #command: [
+    #  "sh", "-c",
+    #  "python -m debugpy --listen 0.0.0.0:5678 --wait-for-client -m uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+    command: ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port 8000"]
     ports:
       - "${APP_PORT}:8000"
+      #- "5678:5678"  # for debugging
     restart: unless-stopped
     depends_on:
       - db
