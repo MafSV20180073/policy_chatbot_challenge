@@ -12,6 +12,7 @@ router = APIRouter()
 
 @router.post("/cancel_order")
 def cancel_order(request: CancelOrderRequest, db: Session = Depends(get_db)):
+    print("\n\nI reached cancel_order endpoint, yey!!!")
     order = db.query(Order).filter(Order.tracking_number == str(request.tracking_number)).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found.")
@@ -28,8 +29,9 @@ def cancel_order(request: CancelOrderRequest, db: Session = Depends(get_db)):
         return {"success": True, "message": "Order cancelled"}
 
 
-@router.get("/track-order")  # request: TrackOrderRequest
+@router.get("/track_order")  # request: TrackOrderRequest
 def track_order(tracking_number: int, db: Session = Depends(get_db)):
+    print("\n\nI reached track_order endpoint, yey!!!")
     # order = mock_orders.get(request.order_id)
     order = db.query(Order).filter(Order.tracking_number == str(tracking_number)).first()
     if not order:
