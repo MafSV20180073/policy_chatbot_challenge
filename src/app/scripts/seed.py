@@ -1,8 +1,8 @@
 import pandas as pd
 from sqlalchemy.orm import Session
 
-from db import SessionLocal, initialize_db
-from models import Order
+from ..db import SessionLocal, initialize_db
+from ..models import Order
 
 
 def seed_db():

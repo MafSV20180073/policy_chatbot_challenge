@@ -16,8 +16,8 @@ MODEL = os.getenv("MODEL", "mistralai/mistral-7b-instruct:free")
 
 # Example usage:
 if __name__ == "__main__":
-    # task = "I want to cancel order 111975 please."
-    task = "What is the status of my order? The tracking number is 285374!"
+    # task = "I want to cancel order 4565683 please."
+    task = "What is the status of my order? The tracking number is 7609462!"
 
     chat = OrderManagementChat(
         model=MODEL,

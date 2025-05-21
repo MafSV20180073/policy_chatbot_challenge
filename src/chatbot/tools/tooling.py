@@ -1,8 +1,11 @@
+import logging
 import os
-import requests
 
+import requests
 from dotenv import load_dotenv
 
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 load_dotenv()
 if os.getenv("USE_NGROK_URL", "false").lower() == "true":
@@ -12,12 +15,26 @@ else:
 
 
 def cancel_order(tracking_number: int):
-    print("\n\nI reached cancel_order_tool, yey!!!")
+    """Tool that performs a POST request to cancel an order by its tracking number.
+
+    Parameters
+    ----------
+    tracking_number : int
+        The tracking number of the order to cancel.
+
+    Returns
+    -------
+    dict
+        JSON response from the API or error information.
+    """
+    logger.info("Calling cancel_order_tool with tracking number: %s", tracking_number)
     response = requests.post(
-        f"{ORDERS_MOCK_API_URL}cancel_order",
-        json={"tracking_number": tracking_number}
+        f"{ORDERS_MOCK_API_URL}cancel_order", json={"tracking_number": tracking_number}
     )
-    print("I have a response now. Returning!!")
+    logger.info(
+        "Received response from cancel_order endpoint with status code: %s",
+        response.status_code,
+    )
     try:
         return response.json()
     except:
@@ -25,12 +42,26 @@ def cancel_order(tracking_number: int):
 
 
 def track_order(tracking_number: int):
-    print("\n\nI reached track_order_tool, yey!!!")
+    """Tool that performs a GET request to get the status of an order by its tracking number.
+
+    Parameters
+    ----------
+    tracking_number : int
+        The tracking number of the order to be tracked.
+
+    Returns
+    -------
+    dict
+        JSON response from the API or error information.
+    """
+    logger.info("Calling track_order_tool with tracking number: %s", tracking_number)
     response = requests.get(
-        f"{ORDERS_MOCK_API_URL}track_order",
-        params={"tracking_number": tracking_number}
+        f"{ORDERS_MOCK_API_URL}track_order", params={"tracking_number": tracking_number}
     )
-    print("I have a response now. Returning.")
+    logger.info(
+        "Received response from track_order endpoint with status code: %s",
+        response.status_code,
+    )
     try:
         return response.json()
     except:
@@ -48,12 +79,12 @@ tools = [
                 "properties": {
                     "tracking_number": {
                         "type": "integer",
-                        "description": "The tracking number of the order to cancel."
+                        "description": "The tracking number of the order to cancel.",
                     }
                 },
                 "required": ["tracking_number"],
-            }
-        }
+            },
+        },
     },
     {
         "type": "function",
@@ -65,17 +96,14 @@ tools = [
                 "properties": {
                     "tracking_number": {
                         "type": "integer",
-                        "description": "The tracking number of the order to be tracked."
+                        "description": "The tracking number of the order to be tracked.",
                     }
                 },
                 "required": ["tracking_number"],
-            }
-        }
-    }
+            },
+        },
+    },
 ]
 
 
-TOOL_MAPPING = {
-    "cancel_order": cancel_order,
-    "track_order": track_order
-}
+TOOL_MAPPING = {"cancel_order": cancel_order, "track_order": track_order}

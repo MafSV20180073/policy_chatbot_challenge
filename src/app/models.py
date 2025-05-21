@@ -23,8 +23,3 @@ class Order(Base):
 class CancelOrderRequest(BaseModel):
     # order_id: str
     tracking_number: int
-
-
-class TrackOrderRequest(BaseModel):
-    # order_id: str
-    tracking_number: int
