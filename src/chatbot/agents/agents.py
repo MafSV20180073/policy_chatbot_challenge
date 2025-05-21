@@ -1,11 +1,13 @@
+import json
 import os
 import uuid
 from datetime import datetime
-from typing import Callable, Dict
+from typing import Callable, Dict, List
 
 from dotenv import load_dotenv
 from openai import OpenAI
-from src.chatbot.tools.tooling import TOOL_MAPPING
+from src.chatbot.tools.promtps import SYSTEM_PROMPT, SYSTEM_PROMPT_2, SYSTEM_PROMPT_3
+from src.chatbot.tools.tooling import TOOL_MAPPING, tools
 
 
 load_dotenv()
@@ -26,115 +28,114 @@ def log_run(session_id: str, step: str, content: str):
         f.write(f"{datetime.now().isoformat()} | {step}: {content}\n")
 
 
-def new_react_agent(user_input: str):
-    pass
+def policy_agent(model: str,
+    user_query: str,
+    conversation_history: List[Dict],
+    system_prompt: str = SYSTEM_PROMPT,
+    react_agent: bool = False,
+):
+    openai_client = OpenAI(
+        base_url=OPEN_ROUTER_API_URL,
+        api_key=OPEN_ROUTER_API_KEY,
+    )
 
+    if react_agent:
+        pass
+    else:
+        pass
 
-def react_agent(user_input: str, tools: Dict[str, Callable[[str], str]]) -> str:
-    session_id = str(uuid.uuid4())
-    thoughts = []
+    messages = [{"role": "system", "content": system_prompt}] + conversation_history + [{"role": "user", "content": user_query}]
 
-    system_prompt = """
-    You are a helpful assistant. You have access to the following tools:
+    request = {
+        "model": model,
+        "tools": tools,
+        "tool_choice": "auto",  # Ensure the model considers using tools
+        "messages": messages,
+    }
 
-    - cancel_order(tracking_number: int): Cancels an order given a tracking number.
-    - track_order(tracking_number: int): Retrieves the status of an order using its tracking number.
+    print("Sending initial request to openai...")
+    try:
+        response = openai_client.chat.completions.create(**request)
 
+        response_message = response.choices[0].message
+        print(f"Initial response received. Content: {response_message.content}")
+        print(f"Tool calls: {response_message.tool_calls}")
 
-    Use this format:
-    Thought: describe what to do
-    Action: tool_name("argument")
-    Observation: result of the action
-    Answer: final answer to the user
-    """
+        messages.append({"role": "assistant", "content": response_message.content})
 
-    full_prompt = f"{system_prompt}\nUser: {user_input}\n"
+        if response_message.tool_calls and len(response_message.tool_calls) > 0:
+            print(f"Processing {len(response_message.tool_calls)} tool call(s)")
 
-    while True:
-        messages = [{"role": "user", "content": full_prompt}]
-        response = client.chat.completions.create(
-            model="meta-llama/llama-3.3-8b-instruct:free",
-            #model="qwen/qwen3-0.6b-04-28:free",
-            messages=messages
-        )
+            messages.pop()  # Remove the previously added assistant message
+            messages.append({
+                "role": "assistant",
+                "content": response_message.content,
+                "tool_calls": [
+                    {
+                        "id": tc.id,
+                        "type": "function",
+                        "function": {
+                            "name": tc.function.name,  # tc.function_name
+                            "arguments": tc.function.arguments,
+                        }
+                    } for tc in response_message.tool_calls]
+            })
 
-        content = response.choices[0].message.content.strip()
-        print("🧠 LLM:", content)
-        full_prompt += f"\n{content}"
+            # Process each tool call:
+            for tool_call in response_message.tool_calls:
+                tool_name = tool_call.function.name
+                tool_args = json.loads(tool_call.function.arguments)
+                print(f"Calling {tool_name} with args: {tool_args}")
 
-        if content.startswith("Answer:"):
-            return content.replace("Answer:", "").strip()
+                # Call the tool function
+                tool_function = TOOL_MAPPING[tool_name]
+                raw_response = tool_function(**tool_args)
 
-        if content.startswith("Action:"):
-            try:
-                tool_call = content.replace("Action:", "").strip()
-                name, arg = tool_call.split("(", 1)
-                name = name.strip()
-                arg = arg.rstrip(")").strip("\"' ")
-
-                tool_fn = tools.get(name)
-                if not tool_fn:
-                    full_prompt += f"\nObservation: ERROR: Unknown tool '{name}'"
-                    continue
-
-                result = tool_fn(arg)
-                full_prompt += f"\nObservation: {result}"
-            except Exception as e:
-                full_prompt += f"\nObservation: ERROR: {str(e)}"
-        else:
-            full_prompt += f"\nObservation: INVALID FORMAT"
-
-
-def react_agent_old(user_input: str, llm_fn: Callable[[str], str]) -> str:
-    thoughts = []
-    session_id = str(uuid.uuid4())
-    prompt = f"""
-You are a helpful customer support assistant. Use the following tools to act:
-- cancel_order(tracking_number: int): Cancels an order given a tracking number.
-- track_order(tracking_number: int): Retrieves the status of an order using its tracking number.
-
-You must reason step-by-step and decide when to use a tool. Follow this format:
-Thought: what you should do
-Action: the tool you want to use and its input
-Observation: the result of the action
-... (repeat Thought/Action/Observation as needed, for a maximum of 8 iterations)
-Answer: your final response to the user
-
-Begin!
-User: {user_input}
-"""
-
-    while True:
-        full_prompt = prompt + "\n" + "\n".join(thoughts) + "\nThought:"
-        output = llm_fn(full_prompt).strip()
-        log_run(session_id, "LLM Output", output)
-        thoughts.append(f"Thought: {output}")
-
-        if output.startswith("Answer:"):
-            final = output.replace("Answer:", "").strip()
-            log_run(session_id, "Final Answer", final)
-            return final
-
-        if output.startswith("Action:"):
-            print("[ACTION!!]")
-            try:
-                action_line = output.replace("Action:", "").strip()
-                func_name, arg_str = action_line.split("(", 1)
-                arg = arg_str.rstrip(")").strip("\"'")
-
-                tool_func = TOOL_MAPPING[func_name.strip()]
-                if not tool_func:
-                    thoughts.append(f"TOOL NOT RECOGNIZED. Tool name: {func_name.strip()}")
-                    log_run(session_id, "TOOL NOT RECOGNIZED:", func_name.strip())
+                # Convert tool response to string if it's a requests.Response:
+                if hasattr(raw_response, 'json'):
+                    try:
+                        tool_content = json.dumps(raw_response.json())
+                    except json.JSONDecodeError:
+                        tool_content = raw_response.text
                 else:
-                    observation = tool_func(arg)
-                    thoughts.append(f"Observation: {observation}")
-                    log_run(session_id, "Observation", observation)
-            except Exception as e:
-                error_msg = f"ERROR: {str(e)}"
-                thoughts.append(f"Observation: {error_msg}")
-                log_run(session_id, "Observation", error_msg)
-        else:
-            thoughts.append("Observation: INVALID FORMAT")
-            log_run(session_id, "Observation", "INVALID FORMAT")
+                    tool_content = json.dumps(raw_response)
 
+                print(f"Tool response: {tool_content}")
+
+                # Add tool response to messages
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": tool_call.id,
+                    # "name": tool_name,
+                    "content": tool_content,
+                })
+
+            # Second request to get our final result:
+            second_request = {
+                "model": model,
+                "messages": messages,
+                "tools": tools,
+                "tool_choice": "auto",
+            }
+
+            try:
+                print("Sending second request...")
+                second_response = openai_client.chat.completions.create(**second_request)
+                second_response_message = second_response.choices[0].message.content
+
+                print("Final response:", second_response_message)
+                return second_response_message
+
+            except Exception as e:
+                error_msg = f"Error: {str(e)}"
+                print(error_msg)
+                return f"I'm sorry, I encountered an error while processing a follow-up request. {str(e)}"
+        else:
+            print("No tool calls were made by the model.")
+            print("Final response:", response_message.content)
+            return response_message.content
+
+    except Exception as e:
+        error_msg = f"Error: {str(e)}"
+        print(error_msg)
+        return f"I'm sorry, I encountered an error while processing your request. {str(e)}"

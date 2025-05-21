@@ -5,7 +5,7 @@ SYSTEM_PROMPT = """
     For cancelling orders, use the cancel_order tool.
     For tracking orders, use the track_order tool.
 
-    ALWAYS use the tools when appropriate rather than making up responses.
+    ALWAYS use the tools when appropriate. NEVER make up information about order status or cancellation results.
 
     """
 
